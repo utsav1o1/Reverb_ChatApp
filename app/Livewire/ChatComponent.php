@@ -2,8 +2,10 @@
 
 namespace App\Livewire;
 
+use App\Events\MessageSendEvent;
 use App\Models\Message;
 use App\Models\User;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class ChatComponent extends Component
@@ -41,8 +43,17 @@ class ChatComponent extends Component
         $chatMessage->receiver_id = $this->receiver_id;
         $chatMessage->message = $this->message;
         $chatMessage->save();
-
+        $this->appendChatDetail($chatMessage);
+        broadcast(new MessageSendEvent($chatMessage))->toOthers();
         $this->message = '';
+    }
+
+    #[On('echo-private:chat-channel.{sender_id},MessageSendEvent')]
+    public function listenForMessage($event) {
+        $chatMessage = Message::whereId($event['message']['id'])
+        ->with('sender:id,name','receiver:id,name')
+        ->first();
+        $this->appendChatDetail($chatMessage);
     }
 
     public function appendChatDetail($message)
